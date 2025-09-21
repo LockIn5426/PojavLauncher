@@ -249,32 +249,6 @@ public class MinecraftGLSurface extends View implements GrabListener, DirectGame
         return true;
     }
 
-
-
-    // @Override
-    // public boolean onHoverEvent(MotionEvent e) {
-    //     // Optional: use hover to move cursor without touching
-    //     // Hover is generated only when a stylus (or other hover-capable tool) is near screen
-    //     int toolType = e.getToolType(0);
-    //     if (toolType == MotionEvent.TOOL_TYPE_STYLUS) {
-    //         switch (e.getActionMasked()) {
-    //             case MotionEvent.ACTION_HOVER_ENTER:
-    //             case MotionEvent.ACTION_HOVER_MOVE:
-    //                 float x = e.getX() * LauncherPreferences.PREF_SCALE_FACTOR;
-    //                 float y = e.getY() * LauncherPreferences.PREF_SCALE_FACTOR;
-    //                 // Move cursor to hover position
-    //                 CallbackBridge.sendCursorPos(x, y);
-    //                 return true;
-    //             case MotionEvent.ACTION_HOVER_EXIT:
-    //                 // Optionally hide cursor or do other cleanup
-    //                 return true;
-    //         }
-    //     }
-    //     return super.onHoverEvent(e);
-    // }
-
-
-
     private void createGamepad(View contextView, InputDevice inputDevice) {
         if(CallbackBridge.sGamepadDirectInput) {
             mGamepadHandler = new DirectGamepad();
