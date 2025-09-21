@@ -183,28 +183,97 @@ public class MinecraftGLSurface extends View implements GrabListener, DirectGame
     @Override
     @SuppressWarnings("accessibility")
     public boolean onTouchEvent(MotionEvent e) {
-        // Kinda need to send this back to the layout
-        if(((ControlLayout)getParent()).getModifiable()) return false;
-
-        // Looking for a mouse to handle, won't have an effect if no mouse exists.
-        for (int i = 0; i < e.getPointerCount(); i++) {
-            int toolType = e.getToolType(i);
-            if(toolType == MotionEvent.TOOL_TYPE_MOUSE) {
-                if(Tools.isAndroid8OrHigher() &&
-                        mPointerCapture != null) {
-                    mPointerCapture.handleAutomaticCapture();
-                    return true;
-                }
-            }else if(toolType != MotionEvent.TOOL_TYPE_STYLUS) continue;
-
-            // Mouse found
-            if(CallbackBridge.isGrabbing()) return false;
-            CallbackBridge.sendCursorPos(   e.getX(i) * LauncherPreferences.PREF_SCALE_FACTOR, e.getY(i) * LauncherPreferences.PREF_SCALE_FACTOR);
-            return true; //mouse event handled successfully
+        // If parent layout is modifiable, let layout handle it
+        if (((ControlLayout) getParent()).getModifiable()) {
+            return false;
         }
-        if (mIngameProcessor == null || mInGUIProcessor == null) return true;
-        return mCurrentTouchProcessor.processTouchEvent(e);
+
+        final int pointerCount = e.getPointerCount();
+
+        // Track whether any pointer was handled
+        boolean handled = false;
+
+        for (int i = 0; i < pointerCount; i++) {
+            int toolType = e.getToolType(i);
+            float x = e.getX(i) * LauncherPreferences.PREF_SCALE_FACTOR;
+            float y = e.getY(i) * LauncherPreferences.PREF_SCALE_FACTOR;
+
+            if (toolType == MotionEvent.TOOL_TYPE_MOUSE) {
+                // Real mouse handling
+                if (Tools.isAndroid8OrHigher() && mPointerCapture != null) {
+                    mPointerCapture.handleAutomaticCapture();
+                } else {
+                    CallbackBridge.sendCursorPos(x, y);
+                }
+                handled = true;
+            } 
+            else if (toolType == MotionEvent.TOOL_TYPE_STYLUS) {
+                // Stylus injects mouse events
+                CallbackBridge.sendCursorPos(x, y);
+
+                int buttonState = e.getButtonState();
+                if ((buttonState & MotionEvent.BUTTON_STYLUS_PRIMARY) != 0) {
+                    CallbackBridge.sendMouseButton(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT, true);
+                    CallbackBridge.sendMouseButton(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT, false);
+                }
+
+                switch (e.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                    case MotionEvent.ACTION_POINTER_DOWN:
+                        CallbackBridge.sendMouseButton(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT, true);
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_POINTER_UP:
+                        CallbackBridge.sendMouseButton(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT, false);
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        CallbackBridge.sendCursorPos(x, y);
+                        break;
+                }
+                handled = true;
+            } 
+            else if (toolType == MotionEvent.TOOL_TYPE_FINGER) {
+                // Finger touches are processed normally
+                if (mCurrentTouchProcessor != null) {
+                    mCurrentTouchProcessor.processTouchEvent(e);
+                }
+                handled = true;
+            }
+        }
+
+        // Fallback: if no stylus/mouse/finger detected
+        if (!handled && (mIngameProcessor == null || mInGUIProcessor == null)) {
+            return true;
+        }
+
+        return true;
     }
+
+
+
+    // @Override
+    // public boolean onHoverEvent(MotionEvent e) {
+    //     // Optional: use hover to move cursor without touching
+    //     // Hover is generated only when a stylus (or other hover-capable tool) is near screen
+    //     int toolType = e.getToolType(0);
+    //     if (toolType == MotionEvent.TOOL_TYPE_STYLUS) {
+    //         switch (e.getActionMasked()) {
+    //             case MotionEvent.ACTION_HOVER_ENTER:
+    //             case MotionEvent.ACTION_HOVER_MOVE:
+    //                 float x = e.getX() * LauncherPreferences.PREF_SCALE_FACTOR;
+    //                 float y = e.getY() * LauncherPreferences.PREF_SCALE_FACTOR;
+    //                 // Move cursor to hover position
+    //                 CallbackBridge.sendCursorPos(x, y);
+    //                 return true;
+    //             case MotionEvent.ACTION_HOVER_EXIT:
+    //                 // Optionally hide cursor or do other cleanup
+    //                 return true;
+    //         }
+    //     }
+    //     return super.onHoverEvent(e);
+    // }
+
+
 
     private void createGamepad(View contextView, InputDevice inputDevice) {
         if(CallbackBridge.sGamepadDirectInput) {
